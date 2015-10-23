@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>The Background Editor</title>
+	<link rel="icon" type="image/png" href="grass.png">
+	<script src="//code.jquery.com/jquery-1.10.2.js"></script>
+	<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+	<script type="text/javascript" src="farbtastic.js"></script>
+	<script src="clipboard.min.js"></script>
+	<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+	<link href="farbtastic.css" rel="stylesheet" type="text/css">
+	<link href="style.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+	<div class="wrapper">
+		<center><img src="title.png" /></center>
+		<div class="xml-wrapper">
+			<div class="xml-top"></div>
+			<textarea id="xml"><C><P Ca="" F="8" /><Z><S><S L="800" X="400" H="20" Y="400" T="0" P="0,0,0.3,0.2,0,0,0,0" /></S><D /><O /><L><VL n="Layer1" l="-1" /><JD c="13191E,250,1,0" P1="0,15" P2="800,15" /><JD c="ff8400,250,0.3,0" P1="0,15" P2="800,15" /><JD c="ff8400,250,0.3,0" P1="0,265" P2="800,265" /><JD c="ff8400,250,0.3,0" P1="0,515" P2="800,515" /><L /></L></Z></C></textarea>
+			<div class="xml-bottom">
+				<button class="xml-load"></button>
+				<button class="xml-copy" data-clipboard-target="#xml"></button>
+			</div>
+		</div>
+		<div class="box">
+			<canvas id="map" width="300" height="400"></canvas>
+		</div>
+		<div class="box">
+			<div id="picker"></div>
+			<label for="color" class="label">Color:</label>
+			<input type="text" id="color" class="text"/>
+		</div>
+		<div class="box">
+			<div id="slider"></div>
+			<label for="opacity" class="label">Opacity:</label>
+			<input type="text" id="opacity" class="text"/>
+		</div>
+		<div class="clear"></div>
+		<center>
+			<pre>webninjasi & hybinkunduz | Images © Melibellule</pre>
+		</center>
+	</div>
+	<script type="text/javascript" src="script.js"></script>
+</body>
+</html>
