@@ -1,10 +1,80 @@
 var defaultXML = '<C><P Ca="" F="8" /><Z><S><S L="800" X="400" H="20" Y="400" T="0" P="0,0,0.3,0.2,0,0,0,0" /></S><D /><O /><L><VL n="Layer1" l="-1" /><JD c="13191E,250,1,0" P1="0,15" P2="800,15" /><JD c="ff8400,250,0.3,0" P1="0,15" P2="800,15" /><JD c="ff8400,250,0.3,0" P1="0,265" P2="800,265" /><JD c="ff8400,250,0.3,0" P1="0,515" P2="800,515" /><L /></L></Z></C>';
+var xmlInfo = {};
 var anyMatch = false;
 var bgcolor, bgopacity=0.3, bgwidth=800;
 var bgimg = new Image();
 bgimg.src = "bg.png";
 
 window.requestAnimationFrame(render);
+
+function showWarn(text) {
+	// TODO
+}
+
+function parseSize(props) {
+	var width = props.attr('L') || 800;
+	var height = props.attr('H') || 400;
+
+	width = parseInt(width);
+	height = parseInt(height);
+
+	xmlInfo.width = isNaN(width) ? 800 : width;
+	xmlInfo.height = isNaN(height) ? 400 : height;
+}
+
+function load2() {
+	var xml = $("#xml").val();
+	var $xmlDoc, xmlProps, xmlRoot;
+
+	try {
+		$xmlDoc = $($.parseXML(xml));
+		xmlProps = $xmlDoc.children('C').children('P');
+		xmlRoot = $xmlDoc.children('C').children('Z');
+	} catch (err) {
+		showWarn("Invalid XML!");
+		return;
+	}
+
+	xmlInfo.doc = $xmlDoc;
+	parseSize(xmlProps);
+	map.height = xmlInfo.height;
+
+	var jointParent = xmlRoot.children('L');
+
+	if (jointParent.length === 0) {
+		return;
+	}
+
+	var joints = jointParent.children('JD');
+
+	// TODO simplify rest use [].filter
+	var cloudmask, color, opacity;
+
+	for (var jprop, jp1, jp2, matches, i=0; i<joints.length; i++) {
+		jprop = joints[i].attr('c');
+		jp1 = joints[i].attr('P1');
+		jp2 = joints[i].attr('P2');
+		jp1 = jp1 ? jp1.split(',') : jp1;
+		jp2 = jp2 ? jp2.split(',') : jp2;
+
+		if (jp1 && jp2 && jp1[1] && jp1[1] == jp2[1]) {
+			if (jprop == '13191E,250,1,0') {
+				cloudmask = joints[i];
+			} else if (matches = jprop.match(/^(\w+),250,(\d+(?:\.\d+)?),\d+$/)) {
+				if (color === undefined && opacity === undefined) {
+					color = matches[1];
+					opacity = matches[2];
+				}
+			}
+		}
+	}
+}
+
+function save2() {
+	var foo = $ts.find("Object").get(0);
+	var serializer = new XMLSerializer(); 
+	var original = serializer.serializeToString(foo);
+}
 
 function load() {
 	var xml = $("#xml").val();
