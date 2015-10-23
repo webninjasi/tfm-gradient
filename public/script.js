@@ -14,7 +14,7 @@ function showWarn(text) {
 var State = {
 		InvalidXML: 0,
 		NoJointRoot: 1,
-		NoJoint: 2,
+		NoJointGroup: 2,
 		NoCloudMask: 3,
 		Normal: 4,
 	};
@@ -40,15 +40,15 @@ function checkXML(xml) {
 
 	ret.joints = ret.jointParent.children('JD');
 
-	if (!checkCloudMask(ret.joints)) {
+	if (ret.joints.length == 0 || !checkCloudMask(ret.joints)) {
 		ret.state = State.NoCloudMask;
 		return ret;
 	}
 
-	var jointGroups = getJointGroups();
+	var jointGroups = getJointGroups(ret.joints);
 
 	if (jointGroups.length < 1) {
-		ret.state = State.NoJoint;
+		ret.state = State.NoJointGroup;
 		return ret;
 	}
 
@@ -60,7 +60,7 @@ function checkXML(xml) {
 
 function checkCloudMask(joints) {
 	var cloudmasks = [].filter.apply(joints, [function(j) {
-			return j.attr('c') == '13191E,250,1,0';
+			return j.getAttribute('c') == '13191E,250,1,0';
 		}]);
 
 	return cloudmasks.length > 0;
@@ -68,45 +68,55 @@ function checkCloudMask(joints) {
 
 function getJointGroups(joints) {
 	var jointGroups = [];
-	var c, p1, p2, jg;
+	var c, cs, p1, p2, jg, j;
 
-	[].forEach.apply(joints, [function(j) {
-			try {
-				c = j.attr('c').split(','); // color, size, opacity, foreground
-				p1 = j.attr('P1').split(',');
-				p2 = j.attr('P2').split(',');
+	for (var i=0; i<joints.length; i++) {
+		j = joints[i];
 
-				if (c[1] == '250' && p1[1] == p2[1]) {
-					jg = findJoints(joints, c[0], c[2], p1[0], p2[0]);
+		c = j.getAttribute('c'); // color, size, opacity, foreground
+		cs = c.split(',');
+		p1 = j.getAttribute('P1').split(',');
+		p2 = j.getAttribute('P2').split(',');
 
-					if (jg && jg.length > 0)
-						jointGroups.push(jg);
-				}
-			} catch (err) {
-				console.log(err);
-			}
-		}]);
+		if (cs[1] == '250' && p1[1] == p2[1] && !inAGroup(jointGroups, c, p1, p2)) {
+			jg = findJoints(joints, c, p1, p2);
+
+			if (jg && jg.length > 1)
+				jointGroups.push(jg);
+		}
+	}
 
 	return jointGroups;
 }
 
-function findJoints(joints, color, opacity, p1x, p2x) {
-	var c, p1, p2;
-
+function findJoints(joints, c, p1, p2) {
 	return [].filter.apply(joints, [function(j) {
-			try {
-				c = j.attr('c').split(',');
-				p1 = j.attr('P1').split(',');
-				p2 = j.attr('P2').split(',');
-
-				return
-					c[1] == '250' && p1[1] == p2[1]
-					&& c[0] == color && c[2] == opacity
-					&& p1[0] == p1x && p2[0] == p2x;
-			} catch (err) {
-				return false;
-			}
+			return inSameGroup(j, c, p1, p2);
 		}]);
+}
+
+function inAGroup(groups, c, p1, p2) {
+	for (var i=0; i<groups.length; i++) {
+		if (inSameGroup(groups[i][0], c, p1, p2)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function inSameGroup(j1, j2_c, j2_p1, j2_p2) {
+	try {
+		var
+			j1_c = j1.getAttribute('c'),
+			j1_p1 = j1.getAttribute('P1').split(','),
+			j1_p2 = j1.getAttribute('P2').split(',');
+
+		return j1_c == j2_c
+			&& j1_p1[0] == j2_p1[0] // p1.x
+			&& j1_p2[0] == j2_p2[0]; // p2.x
+	} catch (err) {}
+
+	return false;
 }
 
 function parseSize(props) {
