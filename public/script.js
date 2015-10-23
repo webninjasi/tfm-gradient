@@ -11,6 +11,104 @@ function showWarn(text) {
 	// TODO
 }
 
+var State = {
+		InvalidXML: 0,
+		NoJointRoot: 1,
+		NoJoint: 2,
+		NoCloudMask: 3,
+		Normal: 4,
+	};
+
+function checkXML(xml) {
+	var ret = {}
+
+	try {
+		ret.tree = $.parseXML(xml);
+		var $tree = $(ret.tree);
+		ret.props = $tree.children('C').children('P');
+		ret.root = $tree.children('C').children('Z');
+	} catch (err) {
+		return { state: State.InvalidXML };
+	}
+
+	try {
+		ret.jointParent = ret.root.children('L');
+	} catch (err) {
+		ret.state = State.NoJointRoot;
+		return ret;
+	}
+
+	ret.joints = ret.jointParent.children('JD');
+
+	if (!checkCloudMask(ret.joints)) {
+		ret.state = State.NoCloudMask;
+		return ret;
+	}
+
+	var jointGroups = getJointGroups();
+
+	if (jointGroups.length < 1) {
+		ret.state = State.NoJoint;
+		return ret;
+	}
+
+	ret.jointGroup = jointGroups[0];
+	ret.state = State.Normal;
+
+	return ret;
+}
+
+function checkCloudMask(joints) {
+	var cloudmasks = [].filter.apply(joints, [function(j) {
+			return j.attr('c') == '13191E,250,1,0';
+		}]);
+
+	return cloudmasks.length > 0;
+}
+
+function getJointGroups(joints) {
+	var jointGroups = [];
+	var c, p1, p2, jg;
+
+	[].forEach.apply(joints, [function(j) {
+			try {
+				c = j.attr('c').split(','); // color, size, opacity, foreground
+				p1 = j.attr('P1').split(',');
+				p2 = j.attr('P2').split(',');
+
+				if (c[1] == '250' && p1[1] == p2[1]) {
+					jg = findJoints(joints, c[0], c[2], p1[0], p2[0]);
+
+					if (jg && jg.length > 0)
+						jointGroups.push(jg);
+				}
+			} catch (err) {
+				console.log(err);
+			}
+		}]);
+
+	return jointGroups;
+}
+
+function findJoints(joints, color, opacity, p1x, p2x) {
+	var c, p1, p2;
+
+	return [].filter.apply(joints, [function(j) {
+			try {
+				c = j.attr('c').split(',');
+				p1 = j.attr('P1').split(',');
+				p2 = j.attr('P2').split(',');
+
+				return
+					c[1] == '250' && p1[1] == p2[1]
+					&& c[0] == color && c[2] == opacity
+					&& p1[0] == p1x && p2[0] == p2x;
+			} catch (err) {
+				return false;
+			}
+		}]);
+}
+
 function parseSize(props) {
 	var width = props.attr('L') || 800;
 	var height = props.attr('H') || 400;
@@ -24,50 +122,18 @@ function parseSize(props) {
 
 function load2() {
 	var xml = $("#xml").val();
-	var $xmlDoc, xmlProps, xmlRoot;
 
-	try {
-		$xmlDoc = $($.parseXML(xml));
-		xmlProps = $xmlDoc.children('C').children('P');
-		xmlRoot = $xmlDoc.children('C').children('Z');
-	} catch (err) {
+	xmlInfo = checkXML(xml);
+
+	if (xmlInfo.state == State.InvalidXML) {
 		showWarn("Invalid XML!");
 		return;
 	}
 
-	xmlInfo.doc = $xmlDoc;
-	parseSize(xmlProps);
+	parseSize(xmlInfo.props);
 	map.height = xmlInfo.height;
 
-	var jointParent = xmlRoot.children('L');
-
-	if (jointParent.length === 0) {
-		return;
-	}
-
-	var joints = jointParent.children('JD');
-
-	// TODO simplify rest use [].filter
-	var cloudmask, color, opacity;
-
-	for (var jprop, jp1, jp2, matches, i=0; i<joints.length; i++) {
-		jprop = joints[i].attr('c');
-		jp1 = joints[i].attr('P1');
-		jp2 = joints[i].attr('P2');
-		jp1 = jp1 ? jp1.split(',') : jp1;
-		jp2 = jp2 ? jp2.split(',') : jp2;
-
-		if (jp1 && jp2 && jp1[1] && jp1[1] == jp2[1]) {
-			if (jprop == '13191E,250,1,0') {
-				cloudmask = joints[i];
-			} else if (matches = jprop.match(/^(\w+),250,(\d+(?:\.\d+)?),\d+$/)) {
-				if (color === undefined && opacity === undefined) {
-					color = matches[1];
-					opacity = matches[2];
-				}
-			}
-		}
-	}
+	console.log(xmlInfo);
 }
 
 function save2() {
@@ -220,3 +286,4 @@ $('#opacity').keyup(function() {
 $('#xml').bind('input propertychange', load);
 load();
 new Clipboard('.xml-copy');
+$('.xml-load').click(load2);
