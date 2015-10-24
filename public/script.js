@@ -1,7 +1,5 @@
 var defaultXML = '<C><P Ca="" F="8" /><Z><S><S L="800" X="400" H="20" Y="400" T="0" P="0,0,0.3,0.2,0,0,0,0" /></S><D /><O /><L><VL n="Layer1" l="-1" /><JD c="13191E,250,1,0" P1="0,15" P2="800,15" /><JD c="ff8400,250,0.3,0" P1="0,15" P2="800,15" /><JD c="ff8400,250,0.3,0" P1="0,265" P2="800,265" /><JD c="ff8400,250,0.3,0" P1="0,515" P2="800,515" /><L /></L></Z></C>';
-var xmlInfo = {};
-var anyMatch = false;
-var bgcolor, bgopacity=0.3, bgwidth=800;
+var xmlInfo;
 var bgimg = new Image();
 bgimg.src = "bg.png";
 
@@ -32,26 +30,26 @@ function checkXML(xml) {
 		var $tree = $(ret.tree);
 		ret.props = $tree.children('C').children('P');
 		ret.root = $tree.children('C').children('Z');
+
+		if (ret.tree == undefined || ret.props.length < 1 || ret.root.length < 1)
+			return { state: State.InvalidXML };
 	} catch (err) {
 		return { state: State.InvalidXML };
 	}
 
-	try {
-		ret.jointParent = ret.root.children('L');
-	} catch (err) {
+	ret.jointParent = ret.root.children('L');
+	if (ret.jointParent.length < 1) {
 		ret.state = State.NoJointRoot;
 		return ret;
 	}
 
-	ret.joints = ret.jointParent.children('JD');
-
-	if (ret.joints.length == 0 || !checkCloudMask(ret.joints)) {
+	var joints = ret.jointParent.children('JD');
+	if (joints.length == 0 || !checkCloudMask(joints)) {
 		ret.state = State.NoCloudMask;
 		return ret;
 	}
 
-	var jointGroups = getJointGroups(ret.joints);
-
+	var jointGroups = getJointGroups(joints);
 	if (jointGroups.length < 1) {
 		ret.state = State.NoJointGroup;
 		return ret;
@@ -65,7 +63,7 @@ function checkXML(xml) {
 
 function checkCloudMask(joints) {
 	var cloudmasks = [].filter.apply(joints, [function(j) {
-			return j.getAttribute('c') == '13191E,250,1,0';
+			return $(j).attr('c') == '13191E,250,1,0';
 		}]);
 
 	return cloudmasks.length > 0;
@@ -73,18 +71,13 @@ function checkCloudMask(joints) {
 
 function getJointGroups(joints) {
 	var jointGroups = [];
-	var c, cs, p1, p2, jg, j;
+	var jg, j;
 
 	for (var i=0; i<joints.length; i++) {
-		j = joints[i];
+		j = parseJoint(joints[i]);
 
-		c = j.getAttribute('c'); // color, size, opacity, foreground
-		cs = c.split(',');
-		p1 = j.getAttribute('P1').split(',');
-		p2 = j.getAttribute('P2').split(',');
-
-		if (cs[1] == '250' && p1[1] == p2[1] && !inAGroup(jointGroups, c, p1, p2)) {
-			jg = findJoints(joints, c, p1, p2);
+		if (j.cs[1] == '250' && j.p1[1] == j.p2[1] && !inAGroup(jointGroups, j)) {
+			jg = findJoints(joints, j);
 
 			if (jg && jg.length > 1)
 				jointGroups.push(jg);
@@ -94,34 +87,89 @@ function getJointGroups(joints) {
 	return jointGroups;
 }
 
-function findJoints(joints, c, p1, p2) {
+function findJoints(joints, j1) {
 	return [].filter.apply(joints, [function(j) {
-			return inSameGroup(j, c, p1, p2);
+			return inSameGroup(j, j1);
 		}]);
 }
 
-function inAGroup(groups, c, p1, p2) {
+function inAGroup(groups, j) {
 	for (var i=0; i<groups.length; i++) {
-		if (inSameGroup(groups[i][0], c, p1, p2)) {
+		if (inSameGroup(groups[i][0], j)) {
 			return true;
 		}
 	}
 	return false;
 }
 
-function inSameGroup(j1, j2_c, j2_p1, j2_p2) {
+function inSameGroup(elm_j1, j2) {
 	try {
-		var
-			j1_c = j1.getAttribute('c'),
-			j1_p1 = j1.getAttribute('P1').split(','),
-			j1_p2 = j1.getAttribute('P2').split(',');
+		var j1 = parseJoint(elm_j1);
 
-		return j1_c == j2_c
-			&& j1_p1[0] == j2_p1[0] // p1.x
-			&& j1_p2[0] == j2_p2[0]; // p2.x
+		return j1.c == j2.c
+			&& j1.p1[0] == j2.p1[0] // p1.x
+			&& j1.p2[0] == j2.p2[0]; // p2.x
 	} catch (err) {}
 
 	return false;
+}
+
+function parseJoint(j) {
+	var ret = {
+		c: $(j).attr('c'), // color, size, opacity, foreground
+		p1: $(j).attr('P1').split(','),
+		p2: $(j).attr('P2').split(','),
+	}
+	ret.cs = ret.c.split(',');
+
+	return ret;
+}
+
+function parseNode(str) {
+	return $($.parseXML(str)).children(0);
+}
+
+function getJointGroupInfo(jg) {
+	var miny, maxy, minx, maxx;
+	var color, opacity, j;
+
+	j = parseJoint(jg[0]);
+
+	color = j.cs[0];
+	opacity = parseFloat(j.cs[2]);
+	opacity = isNaN(opacity) ? 0 : opacity;
+
+	minx = Math.min(j.p1[0], j.p2[0]);
+	maxx = Math.max(j.p1[0], j.p2[0]);
+
+	for (var p1, i=0; i<jg.length; i++) {
+		p1 = parseInt($(jg[i]).attr('P1').split(',')[1]);
+		p1 = isNaN(p1) ? 0 : p1;
+
+		if (miny == undefined || p1 < miny)
+			miny = p1;
+
+		if (maxy == undefined || p1 > maxy)
+			maxy = p1;
+	}
+
+	return {
+			color: color,
+			opacity: opacity,
+			minx: minx,
+			miny: miny,
+			maxy: maxy,
+			maxx: maxx,
+		};
+}
+
+function setJointGroupInfo(jg, jgInfo) {
+	for (var c, i=0; i<jg.length; i++) {
+		c = $(jg[i]).attr("c").split(',');
+		c[0] = jgInfo.color;
+		c[2] = jgInfo.opacity;
+		$(jg[i]).attr("c", c.join(','));
+	}
 }
 
 function parseSize(props) {
@@ -135,110 +183,110 @@ function parseSize(props) {
 	xmlInfo.height = isNaN(height) ? 400 : height;
 }
 
-function load2() {
-	var xml = $("#xml").val();
+function setMapSize(height) {
+	var map = document.getElementById("map");
+	map.height = height;
+}
 
+function setColorPicker(color) {
+	$.farbtastic('#picker').setColor(color);
+}
+
+function setColorBox(color) {
+	$("#color").val(color);
+}
+
+function setOpacity(opacity) {
+	$("#slider").slider("value", opacity * 10);
+	$("#opacity").val(opacity);
+	xmlInfo.jgInfo.opacity = opacity;
+}
+
+function disableLoad() {
+	$(".xml-load").prop('disabled', true);
+}
+
+function enableLoad() {
+	$(".xml-load").prop('disabled', false);
+}
+
+function load() {
+	disableLoad();
+
+	var xml = $("#xml").val();
 	xmlInfo = checkXML(xml);
+	console.log(xmlInfo);
 
 	if (xmlInfo.state == State.InvalidXML) {
-		showWarn("Invalid XML!");
+		showWarn("invalid");
+		enableLoad();
+
 		return;
 	}
 
 	parseSize(xmlInfo.props);
-	map.height = xmlInfo.height;
+	setMapSize(xmlInfo.height);
 
-	console.log(xmlInfo);
-}
+	if (xmlInfo.state == State.NoJointRoot
+		|| xmlInfo.state == State.NoCloudMask
+		|| xmlInfo.state == State.NoJointGroup) {
 
-function save2() {
-	var foo = $ts.find("Object").get(0);
-	var serializer = new XMLSerializer(); 
-	var original = serializer.serializeToString(foo);
-}
+		if (xmlInfo.state == State.NoJointRoot) {
+			xmlInfo.jointParent = parseNode('<L></L>');
+			$(xmlInfo.root).append(xmlInfo.jointParent);
+			xmlInfo.state = State.NoCloudMask;
+		}
 
-function load() {
-	var xml = $("#xml").val();
-	var matches = xml.match(/<JD.*c="(\w+),250,0.3,0".*?\/><JD.*c="\1,250,0.3,0".*?\/><JD.*c="\1,250,0.3,0".*?\/>/);
-	var hmatch, wmatch, pmatch = xml.match(/<C><P (.*?)\/>/);
-	var map = document.getElementById("map");
+		if (xmlInfo.state == State.NoCloudMask) {
+			xmlInfo.jointParent.append(parseNode('<JD c="13191E,250,1,0" P1="0,15" P2="800,15" />'));
+		}
 
-	anyMatch = false;
+		xmlInfo.jointGroup = [
+				parseNode('<JD c="ff8400,250,0,0" P1="0,125" P2="800,125" />'),
+				parseNode('<JD c="ff8400,250,0,0" P1="0,375" P2="800,375" />'),
+			];
+
+		for (var i=0; i<xmlInfo.jointGroup.length; i++)
+			xmlInfo.jointParent.append(xmlInfo.jointGroup[i]);
+
+		showWarn("joints");
+	}
+
+	xmlInfo.jgInfo = getJointGroupInfo(xmlInfo.jointGroup);
 	
-	if (matches && matches[1]) {
-		anyMatch = true;
-		bgcolor = "#"+matches[1];
-		$.farbtastic('#picker').setColor(bgcolor);
-	}
+	setColorPicker("#"+xmlInfo.jgInfo.color);
+	setOpacity(xmlInfo.jgInfo.opacity);
 
-	if (pmatch && pmatch[0]) {
-		hmatch = pmatch[0].match(/H="(\d+)"/);
-		wmatch = pmatch[0].match(/L="(\d+)"/);
-	}
-
-	if (hmatch && hmatch[1]) {
-		var height = parseInt(hmatch[1]);
-
-		if (isNaN(height))
-			height = 400;
-
-		map.height = height;
-	}
-
-	if (wmatch && wmatch[1]) {
-		var width = parseInt(wmatch[1]);
-
-		if (isNaN(width))
-			width = 800;
-
-		bgwidth = width;
-	}
+	save();
+	enableLoad();
 }
 
 function save() {
-	if (!bgcolor || !bgopacity)
-		return;
+	setJointGroupInfo(xmlInfo.jointGroup, xmlInfo.jgInfo);
 
-	var xml = $("#xml").val();
-	var color = bgcolor.substr(1);
-	
-	if (anyMatch) {
-		xml = xml.replace(/(<JD.*c=")(\w+),250,([\d\.]+)(,0".*?\/><JD.*c=")\2,250,\3(,0".*?\/><JD.*c=")\2,250,\3(,0".*?\/>)/,
-			function(m, m1, m2, m3, m4, m5, m6){
-				return m1+color+",250,"+bgopacity+m4+color+",250,"+bgopacity+m5+color+",250,"+bgopacity+m6;
-			});
-	}/* else {
-		var JDs = '<JD c="13191E,250,1,0" P1="0,15" P2="800,15" /><JD c="'+color+',250,0.3,0" P1="0,15" P2="800,15" /><JD c="'+color+',250,0.3,0" P1="0,265" P2="800,265" /><JD c="'+color+',250,0.3,0" P1="0,515" P2="800,515" />';
+	var serializer = new XMLSerializer();
+	var xml = serializer.serializeToString(xmlInfo.tree);
 
-		if (xml.indexOf('</L>') == -1) {
-			xml = xml.replace('</Z>', '<L>' + JDs + '</L></Z>');
-		} else {
-			xml = xml.replace('</L>', '<L>' + JDs + '</L>');
-		}
-	}*/
-	
 	$("#xml").val(xml);
 }
 
 function render() {
-	if (bgcolor && bgopacity) {
-		var map = document.getElementById("map");
-		var ctx = map.getContext("2d");
-		var width = map.width, height = map.height;
+	var map = document.getElementById("map");
+	var ctx = map.getContext("2d");
+	var height = map.height;
+	var jgi = xmlInfo.jgInfo || { maxx: 800, opacity: 0 };
 
-		ctx.clearRect(0, 0, bgwidth, height);
+	ctx.clearRect(0, 0, jgi.maxx, height);
+	ctx.drawImage(bgimg, 0, 0, bgimg.width, bgimg.height, 0, 0, jgi.maxx, height);
 
-		ctx.drawImage(bgimg, 0, 0, bgimg.width, bgimg.height, 0, 0, bgwidth, height);
-
-		ctx.fillStyle = "#13191E";
-		ctx.fillRect(0, -110, 800, 250);
-		
-		if (bgopacity != 0) {
-			ctx.fillStyle = bgcolor;
-			ctx.globalAlpha = bgopacity;
-			ctx.fillRect(0, 0, width, height);
-			ctx.globalAlpha = 1;
-		}
+	ctx.fillStyle = "#13191E";
+	ctx.fillRect(0, -110, 300, 250);
+	
+	if (jgi.opacity != 0) {
+		ctx.fillStyle = "#"+jgi.color;
+		ctx.globalAlpha = jgi.opacity;
+		ctx.fillRect(jgi.minx, jgi.miny-125, jgi.maxx, jgi.maxy+125);
+		ctx.globalAlpha = 1;
 	}
 
 	window.requestAnimationFrame(render);
@@ -246,9 +294,8 @@ function render() {
 
 // Color Wheel
 $('#picker').farbtastic(function(color) {
-	bgcolor = color;
-	$("#color").val(color);
-	//render();
+	xmlInfo.jgInfo.color = color.substr(1);
+	setColorBox(color);
 	save();
 });
 $('#color').keyup(function() {
@@ -260,15 +307,8 @@ $('#color').keyup(function() {
 	if (color != fcolor)
 		$(this).val(fcolor);
 
-	$.farbtastic('#picker').setColor(fcolor);
-})/*.keypress(function(e){
-	if(e.which >= 32 && e.which < 48 ||
-	e.which > 57 && e.which < 65 ||
-	e.which > 70 && e.which < 97 ||
-	e.which > 102) {
-		e.preventDefault();
-	}
-})*/;
+	setColorPicker(fcolor);
+});
 
 // Opacity Slider
 $("#slider").slider({
@@ -277,9 +317,7 @@ $("#slider").slider({
 	max: 10,
 	value: 3,
 	slide: function(evt, ui) {
-		$("#opacity").val(ui.value / 10);
-		bgopacity = ui.value / 10;
-		//render();
+		setOpacity(ui.value / 10);
 		save();
 	}
 });
@@ -294,11 +332,10 @@ $('#opacity').keyup(function() {
 	if (opacity != fopacity)
 		$(this).val(fopacity);
 
-	$("#slider").slider("value", fopacity * 10);
+	setOpacity(fopacity);
 });
 
 // XML Textarea
-$('#xml').bind('input propertychange', load);
-load();
 new Clipboard('.xml-copy');
-$('.xml-load').click(load2);
+$('.xml-load').click(load);
+load();
