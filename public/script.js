@@ -5,12 +5,12 @@ bgimg.src = "bg.png";
 
 window.requestAnimationFrame(render);
 
-function showWarn(name) {
-	hideWarns();
+function showNotif(name) {
+	hideNotif();
 	$('.notify-'+name).slideDown();
 }
 
-function hideWarns() {
+function hideNotif() {
 	$('.notify').slideUp();
 }
 
@@ -218,7 +218,7 @@ function load() {
 	console.log(xmlInfo);
 
 	if (xmlInfo.state == State.InvalidXML) {
-		showWarn("invalid");
+		showNotif("invalid");
 		enableLoad();
 
 		return;
@@ -249,15 +249,16 @@ function load() {
 		for (var i=0; i<xmlInfo.jointGroup.length; i++)
 			xmlInfo.jointParent.append(xmlInfo.jointGroup[i]);
 
-		showWarn("joints");
+		showNotif("joints");
 	}
 
 	xmlInfo.jgInfo = getJointGroupInfo(xmlInfo.jointGroup);
-	
+
 	setColorPicker("#"+xmlInfo.jgInfo.color);
 	setOpacity(xmlInfo.jgInfo.opacity);
 
 	save();
+	showNotif("loaded");
 	enableLoad();
 }
 
