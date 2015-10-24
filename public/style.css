@@ -4,7 +4,7 @@ body {
 }
 
 .wrapper {
-	width: 645px;
+	width: 700px;
 	margin: 0 auto;
 }
 
@@ -18,26 +18,10 @@ body {
 	clear: both;
 }
 
-.label {
-	font-size: 30px;
-	color: #ffffff;
-}
-
-.text {
-	background: none;
-	font-size: 30px;
-	border: 0;
-	outline: none;
-	width: 195px;
-	text-align: center;
-	color: #ffffff;
-}
-
 .xml-wrapper {
-	/*border: 1px dashed #ffffff;*/
 	background: url(textbox-bg.png) repeat-y;
 	width: 651px;
-	/*padding: 10px;*/
+	margin: 0 auto;
 }
 
 .xml-top {
@@ -69,8 +53,9 @@ body {
 }
 
 .notification {
-	width: 100%;
+	width: 650px;
 	height: 30px;
+	margin: 0 auto;
 }
 
 .notify {

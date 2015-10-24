@@ -188,18 +188,14 @@ function setMapSize(height) {
 	map.height = height;
 }
 
-function setColorPicker(color) {
-	$.farbtastic('#picker').setColor(color);
-}
-
-function setColorBox(color) {
-	$("#color").val(color);
+function setColor(color) {
+	$("#picker").spectrum("set", color);
 }
 
 function setOpacity(opacity) {
-	$("#slider").slider("value", opacity * 10);
-	$("#opacity").val(opacity);
-	xmlInfo.jgInfo.opacity = opacity;
+	var rgb = $("#picker").spectrum("get").toRgb();
+	rgb.a = opacity;
+	$("#picker").spectrum("set", rgb);
 }
 
 function disableLoad() {
@@ -254,7 +250,7 @@ function load() {
 
 	xmlInfo.jgInfo = getJointGroupInfo(xmlInfo.jointGroup);
 
-	setColorPicker("#"+xmlInfo.jgInfo.color);
+	setColor("#"+xmlInfo.jgInfo.color);
 	setOpacity(xmlInfo.jgInfo.opacity);
 
 	save();
@@ -294,46 +290,25 @@ function render() {
 }
 
 // Color Wheel
-$('#picker').farbtastic(function(color) {
-	xmlInfo.jgInfo.color = color.substr(1);
-	setColorBox(color);
+function onPickerChange(color) {
+	xmlInfo.jgInfo.color = color.toHexString().substr(1);
+	xmlInfo.jgInfo.opacity = color.toRgb().a;
 	save();
-});
-$('#color').keyup(function() {
-	var color = $(this).val();
-	var fcolor = "#" + color.replace(/[^0-9a-fA-F]/g, "");
+}
 
-	fcolor = fcolor.substr(0, 7);
-	
-	if (color != fcolor)
-		$(this).val(fcolor);
-
-	setColorPicker(fcolor);
-});
-
-// Opacity Slider
-$("#slider").slider({
-	range: "min",
-	min: 0,
-	max: 10,
-	value: 3,
-	slide: function(evt, ui) {
-		setOpacity(ui.value / 10);
-		save();
-	}
-});
-$("#opacity").val($("#slider").slider("value") / 10);
-$('#opacity').keyup(function() {
-	var opacity = $(this).val();
-	var fopacity = parseFloat(opacity);
-
-	if (isNaN(fopacity))
-		fopacity = 0.3;
-
-	if (opacity != fopacity)
-		$(this).val(fopacity);
-
-	setOpacity(fopacity);
+$("#picker").spectrum({
+	flat: true,
+	preferredFormat: "hex",
+	showAlpha: true,
+	showInput: true,
+	showButtons: false,
+	showPalette: true,
+	showInitial: true,
+	showSelectionPalette: true,
+	palette: [],
+	localStorageKey: "wn.spectrum",
+	change: onPickerChange,
+	move: onPickerChange
 });
 
 // XML Textarea
