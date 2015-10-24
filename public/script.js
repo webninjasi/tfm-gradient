@@ -7,8 +7,13 @@ bgimg.src = "bg.png";
 
 window.requestAnimationFrame(render);
 
-function showWarn(text) {
-	// TODO
+function showWarn(name) {
+	hideWarns();
+	$('.notify-'+name).slideDown();
+}
+
+function hideWarns() {
+	$('.notify').slideUp();
 }
 
 var State = {
