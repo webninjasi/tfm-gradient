@@ -265,13 +265,38 @@ function save() {
 	var xml = serializer.serializeToString(xmlInfo.tree);
 
 	$("#xml").val(xml);
+	saveStorage(xml);
+}
+
+function loadStorage() {
+	if (typeof(Storage)) {
+		var xml = localStorage.getItem("wn.xml");
+
+		if (xml && xml.length > 0) {
+			$("#xml").val(xml);
+		}
+	}
+
+	load();
+}
+
+function saveStorage(xml) {
+	if (typeof(Storage) && xml && xml.length > 0) {
+		localStorage.setItem("wn.xml", xml);
+	}
 }
 
 function render() {
 	var map = document.getElementById("map");
 	var ctx = map.getContext("2d");
 	var height = map.height;
-	var jgi = xmlInfo.jgInfo || { maxx: 800, opacity: 0 };
+	var jgi;
+
+	if (xmlInfo && xmlInfo.jgInfo) {
+		jgi = xmlInfo.jgInfo;
+	} else {
+		jgi = { maxx: 800, opacity: 0 };
+	}
 
 	ctx.clearRect(0, 0, jgi.maxx, height);
 	ctx.drawImage(bgimg, 0, 0, bgimg.width, bgimg.height, 0, 0, jgi.maxx, height);
@@ -314,4 +339,4 @@ $("#picker").spectrum({
 // XML Textarea
 new Clipboard('.xml-copy');
 $('.xml-load').click(load);
-load();
+loadStorage();
