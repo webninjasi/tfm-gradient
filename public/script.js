@@ -1,5 +1,6 @@
 var defaultXML = '<C><P Ca="" F="8" /><Z><S><S L="800" X="400" H="20" Y="400" T="0" P="0,0,0.3,0.2,0,0,0,0" /></S><D /><O /><L><VL n="Layer1" l="-1" /><JD c="13191E,250,1,0" P1="0,15" P2="800,15" /><JD c="ff8400,250,0.3,0" P1="0,15" P2="800,15" /><JD c="ff8400,250,0.3,0" P1="0,265" P2="800,265" /><JD c="ff8400,250,0.3,0" P1="0,515" P2="800,515" /><L /></L></Z></C>';
 var xmlInfo;
+var xmlFromStorage;
 var bgimg = new Image();
 bgimg.src = "bg.png";
 
@@ -273,11 +274,16 @@ function loadStorage() {
 		var xml = localStorage.getItem("wn.xml");
 
 		if (xml && xml.length > 0) {
-			$("#xml").val(xml);
+			xmlFromStorage = xml;
 		}
 	}
+}
 
-	load();
+function loadFromStorage() {
+	if (xmlFromStorage) {
+		$("#xml").val(xmlFromStorage);
+		load();
+	}
 }
 
 function saveStorage(xml) {
@@ -337,6 +343,8 @@ $("#picker").spectrum({
 });
 
 // XML Textarea
+loadStorage();
 new Clipboard('.xml-copy');
 $('.xml-load').click(load);
-loadStorage();
+$('.load-old').click(loadFromStorage);
+load();
