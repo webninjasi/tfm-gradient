@@ -200,11 +200,11 @@ function setOpacity(opacity) {
 }
 
 function disableLoad() {
-	$(".xml-load").prop('disabled', true);
+	$("button.xml-load").prop('disabled', true);
 }
 
 function enableLoad() {
-	$(".xml-load").prop('disabled', false);
+	$("button.xml-load").prop('disabled', false);
 }
 
 function load() {
@@ -344,7 +344,7 @@ $("#picker").spectrum({
 
 // XML Textarea
 loadStorage();
-new Clipboard('.xml-copy');
-$('.xml-load').click(load);
-$('.load-old').click(loadFromStorage);
+new Clipboard('button.xml-copy');
+$('button.xml-load').click(load);
+$('button.load-old').click(loadFromStorage);
 load();
