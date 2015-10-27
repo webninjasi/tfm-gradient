@@ -224,6 +224,8 @@ function load() {
 	parseSize(xmlInfo.props);
 	setMapSize(xmlInfo.height);
 
+	var notif_joints;
+
 	if (xmlInfo.state == State.NoJointRoot
 		|| xmlInfo.state == State.NoCloudMask
 		|| xmlInfo.state == State.NoJointGroup) {
@@ -246,7 +248,7 @@ function load() {
 		for (var i=0; i<xmlInfo.jointGroup.length; i++)
 			xmlInfo.jointParent.append(xmlInfo.jointGroup[i]);
 
-		showNotif("joints");
+		notif_joints = true;
 	}
 
 	xmlInfo.jgInfo = getJointGroupInfo(xmlInfo.jointGroup);
@@ -255,7 +257,7 @@ function load() {
 	setOpacity(xmlInfo.jgInfo.opacity);
 
 	save();
-	showNotif("loaded");
+	showNotif(notif_joints ? "joints" : "loaded");
 	enableLoad();
 }
 
