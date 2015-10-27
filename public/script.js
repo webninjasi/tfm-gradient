@@ -323,10 +323,15 @@ function render() {
 }
 
 // Color Wheel
-function onPickerChange(color) {
-	xmlInfo.jgInfo.color = color.toHexString().substr(1);
-	xmlInfo.jgInfo.opacity = color.toRgb().a;
-	save();
+function onPickerChange(colorInfo) {
+	var color = colorInfo.toHexString().substr(1);
+	var opacity = colorInfo.toRgb().a;
+
+	if (xmlInfo.jgInfo.color != color || xmlInfo.jgInfo.opacity != opacity) {
+		xmlInfo.jgInfo.color = color;
+		xmlInfo.jgInfo.opacity = opacity;
+		save();
+	}
 }
 
 $("#picker").spectrum({
