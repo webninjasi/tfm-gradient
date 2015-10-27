@@ -237,13 +237,16 @@ function load() {
 		}
 
 		if (xmlInfo.state == State.NoCloudMask) {
-			xmlInfo.jointParent.append(parseNode('<JD c="13191E,250,1,0" P1="0,15" P2="800,15" />'));
+			xmlInfo.jointParent.append(parseNode('<JD c="13191E,250,1,0" P1="0,15" P2="'+xmlInfo.width+',15" />'));
 		}
 
 		xmlInfo.jointGroup = [
-				parseNode('<JD c="ff8400,250,0,0" P1="0,125" P2="800,125" />'),
-				parseNode('<JD c="ff8400,250,0,0" P1="0,375" P2="800,375" />'),
+				parseNode('<JD c="ff8400,250,0.3,0" P1="0,125" P2="'+xmlInfo.width+',125" />'),
+				parseNode('<JD c="ff8400,250,0.3,0" P1="0,375" P2="'+xmlInfo.width+',375" />'),
 			];
+
+		for (var y=375; y<(xmlInfo.height-250); y+=250)
+			xmlInfo.jointGroup.push(parseNode('<JD c="ff8400,250,0.3,0" P1="0,'+y+'" P2="'+xmlInfo.width+','+y+'" />'));
 
 		for (var i=0; i<xmlInfo.jointGroup.length; i++)
 			xmlInfo.jointParent.append(xmlInfo.jointGroup[i]);
