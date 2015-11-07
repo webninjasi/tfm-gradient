@@ -130,6 +130,15 @@ function parseNode(str) {
 	return $($.parseXML(str)).children(0);
 }
 
+function createJoint(color, opacity, p1x, p2x, y) {
+	color = color || xmlInfo.jgInfo.color;
+	opacity = opacity || xmlInfo.jgInfo.opacity;
+	p1x = p1x || 0;
+	p2x = p2x || xmlInfo.width;
+
+	return parseNode('<JD c="'+color+',250,'+opacity+',0" P1="'+p1x+','+y+'" P2="'+p2x+','+y+'" />').get(0);
+}
+
 function getJointGroupInfo(jg) {
 	var miny, maxy, minx, maxx;
 	var color, opacity, j;
@@ -199,6 +208,7 @@ function setOpacity(opacity) {
 	$("#picker").spectrum("set", rgb);
 }
 
+// XML Load/Save
 function disableLoad() {
 	$("button.xml-load").prop('disabled', true);
 }
@@ -247,6 +257,7 @@ function load() {
 
 		for (var y=375; y<(xmlInfo.height-250); y+=250)
 			xmlInfo.jointGroup.push(parseNode('<JD c="ff8400,250,0.3,0" P1="0,'+y+'" P2="'+xmlInfo.width+','+y+'" />'));
+		//createJoint("ff8400", "0.3", null, null, y)
 
 		for (var i=0; i<xmlInfo.jointGroup.length; i++)
 			xmlInfo.jointParent.append(xmlInfo.jointGroup[i]);
@@ -274,6 +285,33 @@ function save() {
 	saveStorage(xml);
 }
 
+function resizeJoints() {
+	var joint, jg = xmlInfo.jointGroup;
+	var reqJoints = Math.ceil(xmlInfo.height / 250);
+
+	if (reqJoints > (jg.length - 1)) {
+		for (var y=(jg.length - 1) * 250; y<xmlInfo.height; y+=250) {
+			jg.push(createJoint(null, null, null, null, y-125));
+			xmlInfo.jgInfo.maxy += 250;
+		}
+	}	else if (reqJoints < (jg.length - 1)) {
+		for (var y=(jg.length - 1) * 250; y>xmlInfo.height; y-=250) {
+			jg.pop();
+			xmlInfo.jgInfo.maxy -= 250;
+		}
+	}
+
+	for (var i=0; i<jg.length; i++) {
+		joint = parseJoint(jg[i]);
+		$(jg[i]).attr('P2', xmlInfo.width+","+joint.p2[1]);
+		xmlInfo.jgInfo.maxx = xmlInfo.width;
+	}
+
+	console.log(xmlInfo.jointGroup);
+	save();
+}
+
+// Storage
 function loadStorage() {
 	if (typeof(Storage)) {
 		var xml = localStorage.getItem("wn.xml");
@@ -297,6 +335,7 @@ function saveStorage(xml) {
 	}
 }
 
+// Map View
 function render() {
 	var map = document.getElementById("map");
 	var ctx = map.getContext("2d");
@@ -330,7 +369,7 @@ function onPickerChange(colorInfo) {
 	var color = colorInfo.toHexString().substr(1);
 	var opacity = colorInfo.toRgb().a;
 
-	if (xmlInfo.jgInfo.color != color || xmlInfo.jgInfo.opacity != opacity) {
+	if (xmlInfo.jgInfo && (xmlInfo.jgInfo.color != color || xmlInfo.jgInfo.opacity != opacity)) {
 		xmlInfo.jgInfo.color = color;
 		xmlInfo.jgInfo.opacity = opacity;
 		save();
@@ -357,4 +396,5 @@ loadStorage();
 new Clipboard('button.xml-copy');
 $('button.xml-load').click(load);
 $('button.load-old').click(loadFromStorage);
+$('button.resize-joints').click(resizeJoints);
 load();
